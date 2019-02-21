@@ -186,7 +186,7 @@ angular
             }
           } catch (e) {
             $rootScope.$broadcast('LocalStorageModule.notification.error', e.message);
-            return addToCookies(key, value);
+            throw e;
           }
           return true;
         } finally {
