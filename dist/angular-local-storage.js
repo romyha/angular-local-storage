@@ -94,7 +94,7 @@ angular
       var cookie = self.cookie;
       var notify = self.notify;
       var storageType = self.storageType;
-      var webStorage;
+      var webStorage, storageSize;
 
       // When Angular's $document is not available
       if (!$document) {
@@ -148,6 +148,54 @@ angular
         }
       };
       var browserSupportsLocalStorage = checkSupport();
+
+      /**
+       * Calculate the remaining space of localStorage in kB, accurate
+       * to 250kB.
+       * @returns Number
+       */
+      var calcLocalStorageRemainingSpace = function () {
+        var remaining;
+        if (webStorage) {
+          if (storageSize) {
+            remaining = storageSize.kb - (JSON.stringify(webStorage).length / 1024);
+            return {
+              kb: Math.round(remaining),
+              mb: Number((remaining/1024).toFixed(1))
+            };
+          }
+          var i = 0;
+          try {
+            // Test up to 10 MB
+            // 1kb = 1024 char
+            for (i = 250; i <= 10000; i += 250) {
+              webStorage.setItem('test', new Array((i * 1024) + 1).join('a'));
+            }
+          } catch (e) {
+            webStorage.removeItem('test');
+            remaining = i - 250;
+            return {
+              kb: remaining,
+              mb: Math.round(remaining/1024)
+            };
+          }
+        }
+      }
+
+      /**
+       * Retrieve or calculate the storage size in kB, accurate to 250kB.
+       * @returns Number
+       */
+      var calcStorageSize = function () {
+        var remaining = calcLocalStorageRemainingSpace().kb;
+        var size = webStorage.length === 0 ? remaining : Math.round(remaining + (JSON.stringify(webStorage).length / 1024));
+        return {
+          kb: size,
+          mb: Math.round(size/1024)
+        };
+      }
+
+      storageSize = storageSize || calcStorageSize();
 
       // Directly adds a value to local storage
       // If local storage is not available in the browser use cookies
@@ -563,6 +611,8 @@ angular
         };
 
         return {
+          calcRemainingSpace: calcLocalStorageRemainingSpace,
+          storageSize: storageSize,
           isSupported: browserSupportsLocalStorage,
           getStorageType: getStorageType,
           setStorageType: setStorageType,
